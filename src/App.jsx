@@ -9,9 +9,8 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import Dashboard from "./pages/Dashboard"; 
-import Footer from "./components/Footer"; // Custom Footer import
+import Footer from "./components/Footer";
 
-// 1. Add these new imports
 import About from "./pages/About";
 import Guide from "./pages/Guide";
 import Privacy from "./pages/Privacy";
@@ -21,16 +20,17 @@ const LayoutWrapper = ({ children }) => {
   const isDashboard = location.pathname === "/dashboard";
 
   return (
-    // Updated bg color to match your branding
-    <div className="min-h-screen bg-[#0B0B0C] text-white selection:bg-purple-500/30 font-sans flex flex-col">
+    /* FIX: Added 'w-full' and 'overflow-x-hidden'. 
+       This prevents the "shaking" and "cutting off" 
+       on mobile by locking the width to the screen.
+    */
+    <div className="min-h-screen w-full overflow-x-hidden bg-[#0B0B0C] text-white selection:bg-purple-500/30 font-sans flex flex-col">
       {!isDashboard && <Navbar />}
       
-      {/* Main content area */}
-      <main className="flex-1">
+      <main className="flex-1 w-full">
         {children}
       </main>
 
-      {/* Replaced placeholder with your actual Footer component */}
       {!isDashboard && <Footer />}
     </div>
   );

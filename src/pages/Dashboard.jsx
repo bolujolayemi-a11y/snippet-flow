@@ -4,6 +4,7 @@ import SnippetList from "../components/SnippetList";
 import EditorPanel from "../components/EditorPanel";
 import CreateSnippetModal from "../components/CreateSnippetModal"; 
 import { supabase } from "../lib/supabase";
+import { ChevronLeft, Plus } from "lucide-react"; // Icons for mobile navigation
 
 function Dashboard() {
   const [snippets, setSnippets] = useState([]);
@@ -11,6 +12,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userName, setUserName] = useState("Developer");
+  
+  // Mobile navigation state: "list" or "editor"
+  const [mobileView, setMobileView] = useState("list");
 
   async function fetchSnippets() {
     const { data, error } = await supabase
@@ -27,7 +31,12 @@ function Dashboard() {
     setLoading(false);
   }
 
-  // --- NEW: Update Logic ---
+  // Handle selection and switch view on mobile
+  const handleSelectSnippet = (snippet) => {
+    setSelectedSnippet(snippet);
+    setMobileView("editor");
+  };
+
   const handleUpdate = async (id, updatedCode) => {
     const { error } = await supabase
       .from('snippets')
@@ -35,9 +44,7 @@ function Dashboard() {
       .eq('id', id);
 
     if (!error) {
-      // Sync the local state so the sidebar and editor match
       setSnippets(prev => prev.map(s => s.id === id ? { ...s, code: updatedCode } : s));
-      // Optional: Show a brief success message or toast
       console.log("Snippet updated successfully");
     } else {
       alert("Error saving: " + error.message);
@@ -55,6 +62,8 @@ function Dashboard() {
     if (!error) {
       const updatedSnippets = snippets.filter(s => s.id !== id);
       setSnippets(updatedSnippets);
+      // Return to list view on mobile after deletion
+      setMobileView("list");
       if (selectedSnippet?.id === id) {
         setSelectedSnippet(updatedSnippets.length > 0 ? updatedSnippets[0] : null);
       }
@@ -76,35 +85,64 @@ function Dashboard() {
 
   return (
     <div className="flex h-screen w-full bg-[#0B0B0C] text-white overflow-hidden relative">
-      <Sidebar 
-        count={snippets.length} 
-        planType="free" 
-        onNewSnippet={() => setIsModalOpen(true)} 
-      />
+      
+      {/* 1. Sidebar: Hidden on mobile, fixed width on desktop */}
+      <div className="hidden md:block">
+        <Sidebar 
+          count={snippets.length} 
+          planType="free" 
+          onNewSnippet={() => setIsModalOpen(true)} 
+        />
+      </div>
 
-      <div className="w-80 border-r border-white/5 shrink-0 h-full overflow-y-auto bg-white/1">
+      {/* 2. Snippet List Panel */}
+      <div className={`${mobileView === 'list' ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-80 border-r border-white/5 shrink-0 h-full overflow-y-auto bg-white/1`}>
+        {/* Mobile-only header for the list */}
+        <div className="md:hidden flex items-center justify-between p-6 border-b border-white/5 bg-[#0B0B0C]">
+          <h2 className="text-xl font-black tracking-tighter">My Snippets</h2>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="p-2 bg-purple-500 rounded-lg"
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+
         <SnippetList 
           snippets={snippets} 
-          onSelect={setSelectedSnippet} 
+          onSelect={handleSelectSnippet} 
           activeId={selectedSnippet?.id}
           onNewSnippet={() => setIsModalOpen(true)} 
         />
       </div>
 
-      <div className="flex-1 h-full overflow-hidden bg-[#050505]">
+      {/* 3. Editor Panel */}
+      <div className={`${mobileView === 'editor' ? 'flex' : 'hidden'} md:flex flex-col flex-1 h-full overflow-hidden bg-[#050505]`}>
+        {/* Mobile-only back button header */}
+        <div className="md:hidden flex items-center p-4 border-b border-white/5 bg-black">
+          <button 
+            onClick={() => setMobileView("list")}
+            className="flex items-center gap-2 text-gray-400 text-sm font-bold uppercase tracking-widest"
+          >
+            <ChevronLeft size={20} /> Back to list
+          </button>
+        </div>
+
         <EditorPanel 
           snippet={selectedSnippet} 
-          onSave={handleUpdate} // Replaced the empty function with handleUpdate
+          onSave={handleUpdate}
           onDelete={handleDelete}
         />
       </div>
 
+      {/* 4. Modals */}
       {isModalOpen && (
         <CreateSnippetModal 
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
             fetchSnippets();
+            setMobileView("list"); // Ensure we see the new snippet in the list
           }}
         />
       )}

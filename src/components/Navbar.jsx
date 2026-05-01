@@ -23,7 +23,7 @@ export default function Navbar() {
           
           <Link 
             to="/signup" 
-            className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-gray-200 transition-all active:scale-95 cursor-pointer inline-block"
+            className="rounded-full bg-white px-3 py-1.5 md:px-5 md:py-2 text-[10px] md:text-sm font-semibold text-black hover:bg-gray-200 transition-all active:scale-95 cursor-pointer inline-block whitespace-nowrap"
           >
             Get Started
           </Link>

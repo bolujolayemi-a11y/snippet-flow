@@ -1,28 +1,34 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const navLinks = [
+    { name: "Features", path: "/features" },
+    { name: "Pricing", path: "/pricing" },
+  ];
+
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-xl">
-      {/* 1. Added w-full to ensure the flex container fills the screen.
-          2. Used px-5 for a slightly better balance on small screens.
-      */}
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 md:px-6">
         
-        {/* 3. Added leading-none to prevent the italic text from 
-             getting cut off at the top/bottom.
-        */}
-        <Link to="/" className="text-lg md:text-xl font-bold tracking-tighter italic cursor-pointer shrink-0 leading-none">
+        {/* Logo */}
+        <Link to="/" className="text-lg md:text-xl font-bold tracking-tighter italic cursor-pointer shrink-0 leading-none text-white">
           Snippet<span className="text-purple-500">Flow</span>
         </Link>
         
+        {/* Right Section */}
         <div className="flex items-center gap-3 md:gap-8">
+          {/* Desktop Links */}
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <Link to="/features" className="hover:text-white transition-colors">
-              Features
-            </Link>
-            <Link to="/pricing" className="hover:text-white transition-colors">
-              Pricing
-            </Link>
+            {navLinks.map((link) => (
+              <Link key={link.name} to={link.path} className="hover:text-white transition-colors">
+                {link.name}
+              </Link>
+            ))}
           </div>
           
           <Link 
@@ -31,8 +37,39 @@ export default function Navbar() {
           >
             Get Started
           </Link>
+
+          {/* Mobile Hamburger Button */}
+          <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 text-gray-400 hover:text-white md:hidden transition-colors"
+          >
+            {isOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Drawer */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-16 left-0 w-full bg-[#0B0B0C] border-b border-white/5 p-6 flex flex-col gap-6 md:hidden shadow-2xl"
+          >
+            {navLinks.map((link) => (
+              <Link 
+                key={link.name} 
+                to={link.path} 
+                onClick={() => setIsOpen(false)}
+                className="text-lg font-medium text-gray-400 hover:text-white transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

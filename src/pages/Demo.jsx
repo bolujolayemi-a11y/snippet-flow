@@ -49,7 +49,7 @@ const auth = (req, res, next) => {
   return (
     <div className="min-h-screen bg-[#0B0B0C] text-white pt-24 md:pt-32 px-4 md:px-6 pb-10">
       {/* Container: Changed from flex to flex-col on mobile */}
-      <div className="max-w-6xl mx-auto min-h-[500px] md:h-[600px] rounded-3xl border border-white/10 bg-[#050505] overflow-hidden flex flex-col md:flex-row shadow-2xl">
+      <div className="max-w-6xl mx-auto min-h-125 md:h-150 rounded-3xl border border-white/10 bg-[#050505] overflow-hidden flex flex-col md:flex-row shadow-2xl">
         
         {/* Mobile Navigation: Only visible on small screens */}
         <div className="md:hidden p-4 border-b border-white/5 bg-white/2 overflow-x-auto flex gap-2 no-scrollbar">
@@ -57,7 +57,7 @@ const auth = (req, res, next) => {
                 <button 
                   key={title}
                   onClick={() => setSelected(title)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                  className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${
                     selected === title ? "bg-purple-500 text-white" : "bg-white/5 text-gray-400"
                   }`}
                 >
@@ -96,7 +96,7 @@ const auth = (req, res, next) => {
         </aside>
 
         {/* Editor Area */}
-        <main className="flex-1 flex flex-col bg-black/40 min-h-[400px]">
+        <main className="flex-1 flex flex-col bg-black/40 min-h-100">
           <div className="h-14 border-b border-white/5 flex items-center justify-between px-6">
             <span className="text-[10px] md:text-xs font-mono text-gray-500">{selected}.js</span>
             <button 

@@ -1,150 +1,99 @@
-# 🚀 SnippetFlow
+# 🚀 SnippetFlow: The AI-Powered Code Auditor
 
-**SnippetFlow** is a modern, minimalist code snippet manager built for developers who value speed, clarity, and focus. Inspired by the clean aesthetics of Linear, it delivers a distraction-free space to store, organize, and reuse your most important code.
+**SnippetFlow** is a modern, minimalist code snippet manager designed for developers who value performance and logic clarity. Beyond simple storage, SnippetFlow uses AI to audit, refine, and explain complex code—from React components to high-performance Pandas pipelines.
 
 ---
 
 ## 🌐 Live Demo
 
-🔗 [View Live App](https://your-live-link-here.vercel.app)
+🔗 [View Live App](https://my-pantry-guide.vercel.app/) _(Update this if you have a new dedicated link)_
 
 ---
 
 ## 📌 Overview
 
-SnippetFlow helps developers eliminate repetitive coding by providing a streamlined environment to manage reusable snippets efficiently. With real-time updates, secure authentication, and a clean UI, it’s designed to fit seamlessly into modern workflows.
+SnippetFlow eliminates "Alphabet Soup" code. It provides a distraction-free space to store snippets and a specialized **AI Refiner** to convert messy logic into production-grade code. Whether you're optimizing frontend state or data science transformations, SnippetFlow ensures your snippets are efficient and documented.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-### 🧩 Minimalist Dashboard
+### 🧠 AI Refiner & Deep Analysis
 
-- Clean three-column layout
-- Bento-style sidebar navigation
-- Focus-driven UI with zero clutter
+- **Multi-Stack Optimization**: Specialized logic for React, JavaScript, and **Python/Pandas**.
+- **Vectorization Logic**: Automatically converts slow Python loops into high-performance vectorized Pandas operations.
+- **Explanation Drawer**: A dedicated Markdown-powered sidebar that breaks down logic step-by-step.
 
-### ⚡ Real-time Editor
+### 🏷️ Intelligent Context Awareness
 
-- Instant snippet saving
-- Syntax highlighting support
-- Smooth editing experience
+- **Auto-Detection**: The editor detects your programming language in real-time.
+- **Smart Tags**: Visual badges that update as you type to reflect the current stack.
 
-### 🔐 Authentication
+### 🛡️ Secure Infrastructure
 
-- Secure login & signup
-- Password recovery
-- Powered by Supabase Auth
+- **Failover System**: Seamlessly switches between **Groq (Llama 3.1)** and **Hugging Face** to ensure 100% AI uptime.
+- **RLS Protection**: Row Level Security ensures your private snippets stay private.
 
-### 📊 Usage Meter
+### 📊 Professional Usage Meter
 
-- Track snippet storage usage
-- Visual feedback on limits
-
-### 📚 Resources Hub
-
-- User Guide
-- About Page
-- Privacy Policy
-
-### 📱 Responsive Design
-
-- Fully optimized for mobile and desktop
-- Seamless cross-device experience
+- **Dual-Limit System**: Tracks both active storage slots (20) and lifetime creation credits (50) to prevent loophole exploitation.
+- **Visual Feedback**: Real-time progress bars and "Upgrade" prompts.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend:** React.js (Vite)
-- **Styling:** Tailwind CSS (Dark mode first)
-- **Backend & Auth:** Supabase (PostgreSQL + RLS)
-- **Routing:** React Router v6
+- **Styling:** Tailwind CSS (Linear-inspired Dark UI)
+- **AI Integration:** Groq SDK (Llama 3.1) & Hugging Face Inference API
+- **Backend:** Supabase (PostgreSQL + PlpgSQL Triggers)
 - **Icons:** Lucide React
-- **Deployment:** Vercel
+- **Animations:** Framer Motion
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Future Roadmap (2027–2030)
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/snippetflow.git
-cd snippetflow
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Set Up Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-```
+- **2027**: VS Code Extension with Jupyter Notebook support.
+- **2028**: **Pro AI Features** (Predictive refactoring and security vulnerability detection).
+- **2029**: **Team Vaults** (Shared engineering pipelines for organizations).
+- **2030**: **Native Mobile IDE** (On-device AI processing for mobile-first developers).
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Architecture
 
-```
+```text
 src/
-├── components/   # Reusable UI components (Sidebar, Footer, Resources)
-├── pages/        # Main pages (Dashboard, Guide, About, Privacy)
-├── lib/          # Configurations (Supabase client)
-├── App.jsx       # Routing and layout logic
+├── components/
+│   ├── AI/             # AI Logic, Explanation Drawer, Refiner Button
+│   ├── Sidebar.jsx     # Smart Usage Meter & Navigation
+│   └── EditorPanel.jsx # Code Editor with Auto-Tagging
+├── lib/
+│   ├── RefinerLogic.js # AI Failover & Cache Management
+│   └── supabase.js     # DB Configuration
 ```
 
 ---
 
-## 🛡️ Security
+## 🛡️ Database Automation (SQL)
 
-SnippetFlow uses **Row Level Security (RLS)** via Supabase to ensure:
+SnippetFlow uses **PostgreSQL Triggers** to handle lifecycle management:
 
-- Users can only access their own data
-- Secure read/write operations per user
-- Strong backend-level protection
-
----
-
-## 💡 Future Improvements
-
-- Snippet tagging & search optimization
-- Folder-based organization
-- Code sharing (public/private links)
-- Keyboard-first navigation
+- **Lifetime Tracking**: Automatically increments creation counts via a `SECURITY DEFINER` function.
+- **Auth Sync**: Syncs Supabase Auth users with custom profile metadata.
 
 ---
 
 ## 👨‍💻 Author
 
-**Jolayemi Boluwatife**
-Junior Frontend Developer
+**Jolayemi Boluwatife** _Junior Frontend Developer & Data Science Enthusiast_
 
-🔗 Portfolio: https://boluwatife-portfolio-psi.vercel.app/
-🔗 GitHub: https://github.com/bolujolayemi-a11y
+🔗 [Portfolio](https://boluwatife-portfolio-psi.vercel.app/)  
+🔗 [GitHub](https://github.com/bolujolayemi-a11y)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
-See the `LICENSE` file for details.
-
----
-
-## 🩶 Acknowledgment
-
-Built with focus, simplicity, and intention by Jolayemi Boluwatife.
+MIT License - Created with intention.

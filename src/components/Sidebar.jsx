@@ -1,35 +1,55 @@
 import { useState, useEffect } from "react";
-import { Plus, Home, Settings, LogOut, Info, BookOpen, ShieldCheck, ExternalLink } from "lucide-react"; // Added Resource icons
+import { Plus, Home, LogOut, Info, BookOpen, ShieldCheck, ExternalLink, AlertCircle } from "lucide-react"; 
 import { supabase } from "../lib/supabase";
-import { useNavigate, Link } from "react-router-dom"; // Added Link
+import { useNavigate, Link } from "react-router-dom"; 
 
-export default function Sidebar({ count, planType, onNewSnippet }) {
+export default function Sidebar({ count, onNewSnippet }) {
   const [userName, setUserName] = useState("Developer");
+  const [lifetimeCount, setLifetimeCount] = useState(0);
   const navigate = useNavigate(); 
-  const limit = 20;
-  const percentage = Math.min((count / limit) * 100, 100);
+  
+  const STORAGE_LIMIT = 20; 
+  const LIFETIME_LIMIT = 50; 
+  
+  const storagePercentage = Math.min((count / STORAGE_LIMIT) * 100, 100);
 
   useEffect(() => {
     async function getUserData() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user?.user_metadata?.full_name) {
-        setUserName(user.user_metadata.full_name.split(' ')[0]);
+      if (user) {
+        setUserName(user.user_metadata?.full_name?.split(' ')[0] || "Developer");
+        
+        const { data } = await supabase
+          .from('profiles')
+          .select('lifetime_creations')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) setLifetimeCount(data.lifetime_creations);
       }
     }
     getUserData();
-  }, []);
+  }, [count]); 
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) {
-      navigate("/"); 
-    } else {
-      console.error("Error logging out:", error.message);
+    if (!error) navigate("/"); 
+  };
+
+  const handleCreateRequest = () => {
+    if (count >= STORAGE_LIMIT) {
+      alert("Storage full! Please delete old snippets or upgrade.");
+      return;
     }
+    if (lifetimeCount >= LIFETIME_LIMIT) {
+      alert("Lifetime free limit reached! Upgrade to continue creating snippets.");
+      return;
+    }
+    onNewSnippet();
   };
 
   return (
-    <aside className="w-64 border-r border-white/5 flex flex-col bg-white/2 h-screen">
+    <aside className="w-64 border-r border-white/5 flex flex-col bg-[#0B0B0C] h-screen">
       <div className="p-6 pb-2">
         <h2 className="text-xl font-bold italic font-serif mb-6">
           Snippet<span className="text-purple-500">Flow</span>
@@ -47,8 +67,10 @@ export default function Sidebar({ count, planType, onNewSnippet }) {
         </button>
         
         <button 
-          onClick={onNewSnippet}
-          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-xl text-xs font-medium text-gray-400 transition-colors group"
+          onClick={handleCreateRequest}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium transition-all group ${
+            count >= STORAGE_LIMIT ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5 text-gray-400'
+          }`}
         >
           <Plus size={16} className="group-hover:text-purple-500" /> New Snippet
         </button>
@@ -61,7 +83,6 @@ export default function Sidebar({ count, planType, onNewSnippet }) {
           Logout
         </button>
 
-        {/* --- NEW: RESOURCES SECTION --- */}
         <div className="pt-8 pb-4">
           <p className="text-[10px] uppercase tracking-[0.2em] text-gray-600 font-bold mb-4 px-4">Resources</p>
           <div className="space-y-1">
@@ -93,19 +114,27 @@ export default function Sidebar({ count, planType, onNewSnippet }) {
       </nav>
 
       {/* Usage Meter Section */}
-      <div className="p-4 border-t border-white/5 bg-white/1">
+      <div className="p-4 border-t border-white/5 bg-black/20">
         <div className="flex justify-between text-[10px] uppercase tracking-widest text-gray-500 mb-2 font-bold">
           <span>Storage</span>
-          <span>{count} / {limit}</span>
+          <span className={count >= STORAGE_LIMIT ? "text-red-500 animate-pulse" : ""}>{count} / {STORAGE_LIMIT}</span>
         </div>
         <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mb-4">
           <div 
-            className="h-full bg-purple-500 transition-all duration-700 ease-in-out" 
-            style={{ width: `${percentage}%` }} 
+            className={`h-full transition-all duration-700 ease-in-out ${count >= STORAGE_LIMIT ? 'bg-red-500' : 'bg-purple-500'}`} 
+            style={{ width: `${storagePercentage}%` }} 
           />
         </div>
+        
+        {lifetimeCount >= (LIFETIME_LIMIT * 0.8) && (
+          <div className="flex items-center gap-2 mb-3 text-[9px] text-orange-400 font-bold uppercase tracking-tighter animate-pulse">
+            <AlertCircle size={10} />
+            <span>Lifetime: {LIFETIME_LIMIT - lifetimeCount} credits left</span>
+          </div>
+        )}
+
         <button className="w-full py-2 bg-white text-black text-[10px] font-bold uppercase rounded-lg hover:bg-gray-200 transition-all active:scale-95 shadow-lg shadow-white/5">
-          Upgrade
+          Upgrade Now
         </button>
       </div>
     </aside>

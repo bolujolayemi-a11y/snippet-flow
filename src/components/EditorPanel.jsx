@@ -1,31 +1,78 @@
 import { Copy, Check, Save, Trash2, BookOpen, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import ExplanationDrawer from "./AI/ExplanationDrawer";
-import RefinerButton from "./AI/RefinerButton"; // Added this import
+import RefinerButton from "./AI/RefinerButton"; 
 import { refineSnippetWithFailover } from "../lib/RefinerLogic";
 
 export default function EditorPanel({ snippet, onSave, onDelete }) {
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [tempCode, setTempCode] = useState("");
+  const [detectedLanguage, setDetectedLanguage] = useState("text"); // Auto-tag state
   
   // AI States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [explanation, setExplanation] = useState("");
   const [isExplaining, setIsExplaining] = useState(false);
 
+  // 1. Language Detection Logic
+  // 1. Improved Language Detection Logic
+  const autoDetectLanguage = (code) => {
+    if (!code) return "text";
+    const c = code.trim().toLowerCase(); // Convert to lowercase for easier matching
+    
+    // Pandas Detection
+    if (c.includes('import pandas') || c.includes('pd.')) return 'pandas';
+    
+    // HTML Detection (More aggressive)
+    if (c.startsWith('<') || c.includes('</div>') || c.includes('<html>') || c.includes('class=')) {
+        // If it has curly braces and colons, it might be CSS or JS, 
+        // but if it has tags, it's definitely HTML
+        if (c.includes('<') && c.includes('>')) return 'html';
+    }
+    
+    // CSS Detection
+    if (c.includes('{') && c.includes(':') && !c.includes('const') && !c.includes('function')) return 'css';
+    
+    // JS/React Detection
+    if (c.includes('import ') || c.includes('const ') || c.includes('export ') || c.includes('=>')) return 'javascript';
+    
+    // Python Detection
+    if (c.includes('def ') || (c.includes('print(') && !c.includes('console.log'))) return 'python';
+    
+    return snippet?.language || "text";
+  };
+
   useEffect(() => {
     if (snippet) {
       setTempCode(snippet.code);
+      setDetectedLanguage(snippet.language || "text");
       setExplanation(""); 
       setIsDrawerOpen(false);
     }
   }, [snippet]);
+
+  // 2. Update tag when typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDetectedLanguage(autoDetectLanguage(tempCode));
+    }, 500); // Debounce to avoid flickering
+    return () => clearTimeout(timer);
+  }, [tempCode]);
 
   const handleCopy = () => {
     if (!tempCode) return;
     navigator.clipboard.writeText(tempCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = async () => {
+    if (!tempCode) return;
+    // We pass the detectedLanguage so the DB stays updated too
+    await onSave(snippet.id, tempCode, detectedLanguage);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleExplain = async () => {
@@ -35,7 +82,6 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
     setIsExplaining(true);
     try {
       const result = await refineSnippetWithFailover(tempCode, "explain");
-      // Handle potential object or string response
       setExplanation(result.explanation || (typeof result === 'string' ? result : "Analysis complete.")); 
     } catch (err) {
       setExplanation("Failed to generate explanation. Please try again.");
@@ -57,35 +103,36 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
 
   return (
     <div className="flex-1 flex flex-col bg-[#050505] h-full overflow-hidden relative">
-      {/* Top Toolbar */}
-      <div className="h-16 px-8 border-b border-white/5 flex justify-between items-center bg-[#0B0B0C]">
+      <div className="min-h-16 px-4 md:px-8 py-3 border-b border-white/5 flex flex-wrap justify-between items-center gap-4 bg-[#0B0B0C]">
         <div className="flex items-center gap-4">
-          <h2 className="text-sm font-semibold tracking-tight">{snippet.title}</h2>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 uppercase font-bold tracking-widest">
-            {snippet.language || "text"}
+          <h2 className="text-sm font-semibold tracking-tight truncate max-w-30 sm:max-w-none">
+            {snippet.title}
+          </h2>
+          {/* Tag now uses detectedLanguage */}
+          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 uppercase font-bold tracking-widest transition-all">
+            {detectedLanguage}
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* REFINER BUTTON: Added here */}
+        <div className="flex items-center gap-2 md:gap-3">
           <RefinerButton 
             currentCode={tempCode} 
             onRefined={(newCode) => setTempCode(newCode)} 
           />
 
-          {/* EXPLAIN BUTTON */}
           <button 
             onClick={handleExplain}
             disabled={!tempCode || isExplaining}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-purple-400 hover:bg-purple-500/10 transition-all disabled:opacity-50"
+            title="Explain"
           >
             {isExplaining ? <Loader2 size={14} className="animate-spin" /> : <BookOpen size={14} />}
-            Explain
+            <span className="hidden sm:inline">Explain</span>
           </button>
 
           <button 
             onClick={() => onDelete(snippet.id)}
-            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all group"
+            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
             title="Delete Snippet"
           >
             <Trash2 size={16} />
@@ -94,16 +141,33 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
           <button 
             onClick={handleCopy}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+            title="Copy Code"
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-            Copy
+            <span className="hidden sm:inline">Copy</span>
           </button>
           
           <button 
-            onClick={() => onSave(snippet.id, tempCode)}
-            className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-lg shadow-purple-500/10"
+            onClick={handleSave}
+            disabled={saved}
+            className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-lg flex items-center gap-2 ${
+              saved 
+              ? "bg-green-600 text-white shadow-green-500/10" 
+              : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/10"
+            }`}
           >
-            Save Changes
+            {saved ? (
+              <>
+                <Check size={14} />
+                <span className="hidden sm:inline">Changes Saved!</span>
+                <span className="sm:hidden">Saved</span>
+              </>
+            ) : (
+              <>
+                <span className="sm:hidden"><Save size={14} /></span>
+                <span className="hidden sm:inline">Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -117,7 +181,6 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
           placeholder="Paste or type your code here..."
         />
 
-        {/* EXPLANATION DRAWER */}
         <ExplanationDrawer 
           isOpen={isDrawerOpen} 
           onClose={() => setIsDrawerOpen(false)} 

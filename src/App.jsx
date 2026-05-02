@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react"; // Added hooks
+import { supabase } from "./lib/supabase";   // Ensure your supabase client is imported
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
@@ -11,35 +13,64 @@ import UpdatePassword from "./pages/UpdatePassword";
 import Dashboard from "./pages/Dashboard"; 
 import Footer from "./components/Footer";
 
+// Resources & Admin
 import About from "./pages/About";
 import Guide from "./pages/Guide";
 import Privacy from "./pages/Privacy";
+import AdminPanel from "./pages/AdminPanel"; // Your God Mode Bento
 
-const LayoutWrapper = ({ children }) => {
+const LayoutWrapper = ({ children, isKilled }) => {
   const location = useLocation();
   const isDashboard = location.pathname === "/dashboard";
+  const isAdminPage = location.pathname === "/god-mode-bolu"; // Hide nav/footer on Admin too
+
+  // If Kill Switch is flipped, show the lockdown screen instead of the app
+  if (isKilled && !isAdminPage) {
+    return (
+      <div className="h-screen w-full bg-[#050505] text-white flex flex-col items-center justify-center p-10 text-center font-sans">
+        <h1 className="text-6xl font-black tracking-tighter mb-4 text-red-600">OFFLINE</h1>
+        <p className="text-gray-500 max-w-sm uppercase text-[10px] tracking-[0.3em] leading-loose">
+          System suspended by IP owner. <br /> Maintenance or Lease renewal in progress.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    /* FIX: Added 'w-full' and 'overflow-x-hidden'. 
-       This prevents the "shaking" and "cutting off" 
-       on mobile by locking the width to the screen.
-    */
     <div className="min-h-screen w-full overflow-x-hidden bg-[#0B0B0C] text-white selection:bg-purple-500/30 font-sans flex flex-col">
-      {!isDashboard && <Navbar />}
+      {!isDashboard && !isAdminPage && <Navbar />}
       
       <main className="flex-1 w-full">
         {children}
       </main>
 
-      {!isDashboard && <Footer />}
+      {!isDashboard && !isAdminPage && <Footer />}
     </div>
   );
 };
 
 function App() {
+  const [isKilled, setIsKilled] = useState(false);
+
+  // PLATFORM GATEKEEPER: Checks the database for the Kill Switch
+  useEffect(() => {
+    async function checkPlatformStatus() {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('kill_switch')
+        .eq('id', 1)
+        .single();
+      
+      if (data?.kill_switch) {
+        setIsKilled(true);
+      }
+    }
+    checkPlatformStatus();
+  }, []);
+
   return (
     <Router>
-      <LayoutWrapper>
+      <LayoutWrapper isKilled={isKilled}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/features" element={<Features />} />
@@ -53,6 +84,9 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/privacy" element={<Privacy />} />
+
+          {/* MASTER CONTROLLER ROUTE - Only in your version */}
+          <Route path="/god-mode-bolu" element={<AdminPanel />} />
         </Routes>
       </LayoutWrapper>
     </Router>

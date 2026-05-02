@@ -73,6 +73,7 @@ export default function CreateSnippetModal({ onClose, onSuccess }) {
                 <option value="html">HTML</option>
                 <option value="css">CSS</option>
                 <option value="react">React (JSX)</option>
+                <option value="pandas">Python (Pandas)</option>
               </select>
             </div>
           </div>

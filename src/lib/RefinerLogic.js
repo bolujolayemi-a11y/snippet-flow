@@ -24,6 +24,8 @@ The "explanation" field MUST be detailed and formatted with Markdown:
 - Suggest 'df.query()' or 'df.loc[]' for more readable filtering.
 - In the explanation, explicitly mention any data transformations like 'groupby', 'merge', or 'pivot'.
 - Ensure variable names follow data science conventions (e.g., 'df_sales' instead of 'd').
+
+CRITICAL: Do not include markdown backticks or introductory text. Start with { and end with }.
 `;
 
 export const refineSnippetWithFailover = async (currentCode) => {
@@ -31,7 +33,9 @@ export const refineSnippetWithFailover = async (currentCode) => {
   const codeString = typeof currentCode === 'string' ? currentCode : (currentCode.code || String(currentCode));
   const cacheKey = getHash(codeString);
   
-  localStorage.removeItem(cacheKey); 
+  // Checking cache first before hitting APIs
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return JSON.parse(cached);
 
   try {
     console.log("📡 Calling Groq via Direct Bridge...");
@@ -65,9 +69,12 @@ async function routeToAI(code, provider) {
       body: JSON.stringify({ code, action: 'refine', provider, prompt: SYSTEM_PROMPT })
     });
 
+    // 1. IMPROVED: Check for HTML before trying to parse JSON
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Edge Function routing failed (Received HTML).");
+       const textError = await response.text();
+       console.error("Server returned HTML/Text instead of JSON:", textError.substring(0, 100));
+       throw new Error(`Edge Function (${provider}) is temporarily unavailable.`);
     }
 
     const data = await response.json();
@@ -75,12 +82,19 @@ async function routeToAI(code, provider) {
 
     let result = data;
 
+    // 2. IMPROVED: Handle Hugging Face array responses
     if (Array.isArray(result)) {
       result = result[0]?.generated_text || result[0];
     }
 
-    if (typeof result === 'string') {
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
+    // 3. IMPROVED: Aggressive JSON Extraction
+    if (typeof result === 'string' || (typeof result === 'object' && result !== null)) {
+      let stringToParse = typeof result === 'string' ? result : JSON.stringify(result);
+      
+      // Remove common AI garbage like ```json and ```
+      stringToParse = stringToParse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      const jsonMatch = stringToParse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           result = JSON.parse(jsonMatch[0]);

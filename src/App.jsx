@@ -1,6 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react"; // Added hooks
-import { supabase } from "./lib/supabase";   // Ensure your supabase client is imported
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom"; // Added Navigate
+import { useState, useEffect } from "react"; 
+import { supabase } from "./lib/supabase";   
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
@@ -13,19 +13,15 @@ import UpdatePassword from "./pages/UpdatePassword";
 import Dashboard from "./pages/Dashboard"; 
 import Footer from "./components/Footer";
 
-// Resources & Admin
 import About from "./pages/About";
 import Guide from "./pages/Guide";
 import Privacy from "./pages/Privacy";
-import AdminPanel from "./pages/AdminPanel"; // Your God Mode Bento
 
 const LayoutWrapper = ({ children, isKilled }) => {
   const location = useLocation();
-  const isDashboard = location.pathname === "/dashboard";
-  const isAdminPage = location.pathname === "/god-mode-bolu"; // Hide nav/footer on Admin too
-
-  // If Kill Switch is flipped, show the lockdown screen instead of the app
-  if (isKilled && !isAdminPage) {
+  const isDashboard = location.pathname.startsWith("/dashboard");
+  
+  if (isKilled) {
     return (
       <div className="h-screen w-full bg-[#050505] text-white flex flex-col items-center justify-center p-10 text-center font-sans">
         <h1 className="text-6xl font-black tracking-tighter mb-4 text-red-600">OFFLINE</h1>
@@ -38,13 +34,13 @@ const LayoutWrapper = ({ children, isKilled }) => {
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-[#0B0B0C] text-white selection:bg-purple-500/30 font-sans flex flex-col">
-      {!isDashboard && !isAdminPage && <Navbar />}
+      {!isDashboard && <Navbar />}
       
       <main className="flex-1 w-full">
         {children}
       </main>
 
-      {!isDashboard && !isAdminPage && <Footer />}
+      {!isDashboard && <Footer />}
     </div>
   );
 };
@@ -52,17 +48,22 @@ const LayoutWrapper = ({ children, isKilled }) => {
 function App() {
   const [isKilled, setIsKilled] = useState(false);
 
-  // PLATFORM GATEKEEPER: Checks the database for the Kill Switch
   useEffect(() => {
     async function checkPlatformStatus() {
-      const { data } = await supabase
-        .from('admin_settings')
-        .select('kill_switch')
-        .eq('id', 1)
-        .single();
-      
-      if (data?.kill_switch) {
-        setIsKilled(true);
+      try {
+        const { data } = await supabase
+          .from('admin_settings')
+          .select('kill_switch')
+          .eq('id', 1)
+          .single();
+        
+        if (data?.kill_switch) {
+          setIsKilled(true);
+        } else {
+          setIsKilled(false);
+        }
+      } catch (e) {
+        console.error("Kill switch check failed", e);
       }
     }
     checkPlatformStatus();
@@ -84,9 +85,15 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/privacy" element={<Privacy />} />
-
-          {/* MASTER CONTROLLER ROUTE - Only in your version */}
-          <Route path="/god-mode-bolu" element={<AdminPanel />} />
+          
+          {/* 🛡️ BOUNCE PROTECTION */}
+          {/* If they try the old secret URL, send them Home */}
+          <Route path="/god-mode-bolu" element={<Navigate to="/" replace />} />
+          <Route path="/admin-mode-bolu" element={<Navigate to="/" replace />} />
+          
+          {/* 🛡️ CATCH-ALL PROTECTION */}
+          {/* If they type ANY wrong URL, send them Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </LayoutWrapper>
     </Router>

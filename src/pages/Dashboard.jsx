@@ -23,14 +23,13 @@ function Dashboard() {
 
     if (!error && data) {
       setSnippets(data);
-      // Only set a default if one isn't already selected
       if (data.length > 0 && !selectedSnippet) {
         setSelectedSnippet(data[0]);
       }
     }
   }
 
-  // --- 2. UPDATE: Save changes to code ---
+  // --- 2. UPDATE: Save changes to code + AutoTagging ---
   const handleUpdate = async (id, updatedCode) => {
     const { error } = await supabase
       .from('snippets')
@@ -38,9 +37,19 @@ function Dashboard() {
       .eq('id', id);
 
     if (!error) {
-      // Update local state so UI is fast
+      // Immediate local state update for UI speed
       setSnippets(prev => prev.map(s => s.id === id ? { ...s, code: updatedCode } : s));
       console.log("Snippet updated in Supabase");
+
+      // AI Logic: Trigger Auto-tagging in the background
+      try {
+        const { generateAutoTags } = await import("../lib/AutoTag");
+        await generateAutoTags(id, updatedCode);
+        // Refresh snippets to show the new AI-generated tags in the list
+        fetchSnippets(); 
+      } catch (tagError) {
+        console.error("Auto-tagging background process failed:", tagError.message);
+      }
     } else {
       alert("Save failed: " + error.message);
     }
@@ -58,11 +67,8 @@ function Dashboard() {
     if (!error) {
       const updatedSnippets = snippets.filter(s => s.id !== id);
       setSnippets(updatedSnippets);
-      
-      // On mobile, send user back to list after deleting
       setMobileView("list");
 
-      // Select the next available snippet or null
       if (selectedSnippet?.id === id) {
         setSelectedSnippet(updatedSnippets.length > 0 ? updatedSnippets[0] : null);
       }
@@ -125,8 +131,8 @@ function Dashboard() {
         </div>
         <EditorPanel 
           snippet={selectedSnippet} 
-          onSave={handleUpdate} // Restored logic
-          onDelete={handleDelete} // Restored logic
+          onSave={handleUpdate}
+          onDelete={handleDelete}
         />
       </div>
 

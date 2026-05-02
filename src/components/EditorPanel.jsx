@@ -1,16 +1,23 @@
-import { Copy, Check, Save, Trash2 } from "lucide-react";
+import { Copy, Check, Save, Trash2, BookOpen, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import ExplanationDrawer from "./AI/ExplanationDrawer";
+import RefinerButton from "./AI/RefinerButton"; // Added this import
+import { refineSnippetWithFailover } from "../lib/RefinerLogic";
 
 export default function EditorPanel({ snippet, onSave, onDelete }) {
   const [copied, setCopied] = useState(false);
-  // NEW: State to track the code as the user edits
   const [tempCode, setTempCode] = useState("");
+  
+  // AI States
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [explanation, setExplanation] = useState("");
+  const [isExplaining, setIsExplaining] = useState(false);
 
-  // IMPORTANT: When the user clicks a different snippet, 
-  // we must update our editor with the new code.
   useEffect(() => {
     if (snippet) {
       setTempCode(snippet.code);
+      setExplanation(""); 
+      setIsDrawerOpen(false);
     }
   }, [snippet]);
 
@@ -19,6 +26,22 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
     navigator.clipboard.writeText(tempCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExplain = async () => {
+    setIsDrawerOpen(true);
+    if (explanation) return; 
+    
+    setIsExplaining(true);
+    try {
+      const result = await refineSnippetWithFailover(tempCode, "explain");
+      // Handle potential object or string response
+      setExplanation(result.explanation || (typeof result === 'string' ? result : "Analysis complete.")); 
+    } catch (err) {
+      setExplanation("Failed to generate explanation. Please try again.");
+    } finally {
+      setIsExplaining(false);
+    }
   };
 
   if (!snippet) {
@@ -33,7 +56,7 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#050505] h-full overflow-hidden">
+    <div className="flex-1 flex flex-col bg-[#050505] h-full overflow-hidden relative">
       {/* Top Toolbar */}
       <div className="h-16 px-8 border-b border-white/5 flex justify-between items-center bg-[#0B0B0C]">
         <div className="flex items-center gap-4">
@@ -44,12 +67,28 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* REFINER BUTTON: Added here */}
+          <RefinerButton 
+            currentCode={tempCode} 
+            onRefined={(newCode) => setTempCode(newCode)} 
+          />
+
+          {/* EXPLAIN BUTTON */}
+          <button 
+            onClick={handleExplain}
+            disabled={!tempCode || isExplaining}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-purple-400 hover:bg-purple-500/10 transition-all disabled:opacity-50"
+          >
+            {isExplaining ? <Loader2 size={14} className="animate-spin" /> : <BookOpen size={14} />}
+            Explain
+          </button>
+
           <button 
             onClick={() => onDelete(snippet.id)}
-            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all mr-2 group"
+            className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all group"
             title="Delete Snippet"
           >
-            <Trash2 size={16} className="group-active:scale-90 transition-transform" />
+            <Trash2 size={16} />
           </button>
 
           <button 
@@ -57,27 +96,33 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-            {copied ? "Copied" : "Copy"}
+            Copy
           </button>
           
           <button 
-            // UPDATED: Now sends the current tempCode to the Dashboard
             onClick={() => onSave(snippet.id, tempCode)}
-            className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-bold shadow-lg shadow-purple-500/10 transition-all active:scale-95"
+            className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-bold transition-all shadow-lg shadow-purple-500/10"
           >
             Save Changes
           </button>
         </div>
       </div>
 
-      {/* Code Area: Switched from <pre> to <textarea> for editing */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <textarea
           value={tempCode}
           onChange={(e) => setTempCode(e.target.value)}
           spellCheck="false"
           className="w-full h-full p-8 bg-transparent text-gray-300 font-mono text-sm leading-relaxed outline-none resize-none custom-scrollbar"
           placeholder="Paste or type your code here..."
+        />
+
+        {/* EXPLANATION DRAWER */}
+        <ExplanationDrawer 
+          isOpen={isDrawerOpen} 
+          onClose={() => setIsDrawerOpen(false)} 
+          text={explanation}
+          loading={isExplaining}
         />
       </div>
     </div>

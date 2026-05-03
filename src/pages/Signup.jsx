@@ -74,7 +74,7 @@ export default function Signup() {
                 type="text" 
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="Full Name"
                 className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all text-white placeholder:text-gray-600"
               />
             </div>
@@ -104,7 +104,7 @@ export default function Signup() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
-                  placeholder="Minimum 6 characters"
+                  placeholder="******"
                   className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all text-white placeholder:text-gray-600"
                 />
                 <button

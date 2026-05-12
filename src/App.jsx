@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import Dashboard from "./pages/Dashboard"; 
 import Footer from "./components/Footer";
+import { Analytics } from "@vercel/analytics/react";
 
 import About from "./pages/About";
 import Guide from "./pages/Guide";
@@ -40,7 +41,8 @@ const LayoutWrapper = ({ children, isKilled }) => {
         {children}
       </main>
 
-      {!isDashboard && <Footer />}
+     {!isDashboard && <Footer />}
+      <Analytics /> {/* 2. Added Analytics component here */}
     </div>
   );
 };

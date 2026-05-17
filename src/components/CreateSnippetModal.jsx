@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { generateAutoTags } from "../utils/auto-tag"; // Import your auto-tag logic
 
 export default function CreateSnippetModal({ onClose, onSuccess }) {
   const [title, setTitle] = useState("");
-  const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -12,23 +12,33 @@ export default function CreateSnippetModal({ onClose, onSuccess }) {
     e.preventDefault();
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    const { error } = await supabase
-      .from("snippets")
-      .insert([
-        { 
-          title, 
-          language, 
-          code, 
-          user_id: user.id 
-        }
-      ]);
+      // 1. Initial save with 'text' or 'detecting...' as placeholder
+      const { data, error } = await supabase
+        .from("snippets")
+        .insert([
+          { 
+            title, 
+            code, 
+            user_id: user.id,
+            language: 'detecting...' // Visual cue that AI is working
+          }
+        ])
+        .select()
+        .single();
 
-    if (!error) {
+      if (error) throw error;
+
+      // 2. Trigger the AI detection & tagging (Auto-tag.js now handles language too)
+      await generateAutoTags(data.id, code);
+
       onSuccess();
-    } else {
+    } catch (error) {
+      console.error("Error creating snippet:", error.message);
       alert(error.message);
+    } finally {
       setLoading(false);
     }
   };
@@ -46,55 +56,45 @@ export default function CreateSnippetModal({ onClose, onSuccess }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            {/* Title Input */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Snippet Title</label>
-              <input 
-                required
-                type="text" 
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. React Navbar Component"
-                className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 text-white"
-              />
-            </div>
-
-            {/* Language Selector */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Language</label>
-              <select 
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 text-white appearance-none"
-              >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="react">React (JSX)</option>
-                <option value="pandas">Python (Pandas)</option>
-              </select>
-            </div>
+          {/* Title Input - Now taking full width since language dropdown is gone */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Snippet Title</label>
+            <input 
+              required
+              type="text" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Optimized Auth Middleware"
+              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500/50 text-white transition-all"
+            />
           </div>
 
           {/* Code Area */}
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Code</label>
+            <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">
+              Code <span className="text-purple-500/50 lowercase italic ml-2">(Auto-detecting language...)</span>
+            </label>
             <textarea 
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Paste your code here..."
-              className="w-full h-64 bg-[#050505] border border-white/5 rounded-2xl px-6 py-4 text-sm font-mono focus:outline-none focus:border-purple-500/50 text-gray-300 resize-none"
+              className="w-full h-64 bg-[#050505] border border-white/5 rounded-2xl px-6 py-4 text-sm font-mono focus:outline-none focus:border-purple-500/50 text-gray-300 resize-none transition-all"
             />
           </div>
 
           <button 
             disabled={loading}
-            className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            className="w-full bg-white text-black font-bold py-4 rounded-2xl hover:bg-gray-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Save Snippet"}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" size={20} />
+                <span>Analyzing & Saving...</span>
+              </>
+            ) : (
+              "Save Snippet"
+            )}
           </button>
         </form>
       </div>

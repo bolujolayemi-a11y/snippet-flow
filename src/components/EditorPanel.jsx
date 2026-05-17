@@ -14,30 +14,33 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
   const [explanation, setExplanation] = useState("");
   const [isExplaining, setIsExplaining] = useState(false);
 
-  // 1. THE ULTIMATE LANGUAGE DETECTOR
-  const autoDetectLanguage = (code) => {
+const autoDetectLanguage = (code) => {
     if (!code) return "text";
     const c = code.trim();
     const cLower = c.toLowerCase();
     
-    // PRIORITY 1: PANDAS (Very specific)
-    if (cLower.includes('import pandas') || cLower.includes('pd.')) return 'pandas';
-
-    // PRIORITY 2: PYTHON (Unique keywords)
+    // 1. PYTHON & PANDAS (Combined Priority)
+    // We check these first so they "block" CSS or JS from claiming the code
     const isPython = 
       c.includes('def ') || 
       c.includes('pass') || 
       c.includes('elif') || 
       c.includes('import os') ||
+      c.includes('import sys') ||
       c.includes('if __name__ ==') ||
       (c.includes('print(') && !c.includes('console.log'));
 
+    const isPandas = cLower.includes('import pandas') || cLower.includes('pd.');
+
+    if (isPandas) return 'pandas';
     if (isPython) return 'python';
 
-    // PRIORITY 3: HTML
-    if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) return 'html';
+    // 2. HTML
+    if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) {
+        return 'html';
+    }
 
-    // PRIORITY 4: JAVASCRIPT / REACT
+    // 3. JAVASCRIPT / REACT
     const isJS = 
       c.includes('const ') || 
       c.includes('let ') || 
@@ -47,15 +50,18 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
 
     if (isJS) return 'javascript';
 
-    // PRIORITY 5: CSS (Only if it has actual CSS properties)
+    // 4. CSS (The "Semicolon" Protection)
+    // Python dictionaries have { and : but almost NEVER ;
+    // CSS properties ALMOST ALWAYS have ;
     const cssKeywords = ['margin', 'padding', 'color:', 'background', 'display:', 'flex', 'border:'];
     const hasCssProperty = cssKeywords.some(k => cLower.includes(k));
     
-    if (c.includes('{') && c.includes(':') && hasCssProperty && !isPython && !isJS) {
+    if (c.includes('{') && c.includes(':') && c.includes(';') && hasCssProperty) {
         return 'css';
     }
     
-    // FALLBACK: Use existing snippet language or default to "text" (NOT "CSS")
+    // 5. FINAL FALLBACK
+    // If it's none of the above, use the saved language or default to plain text
     return snippet?.language || "text";
   };
 

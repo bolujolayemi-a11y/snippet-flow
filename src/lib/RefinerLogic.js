@@ -30,36 +30,35 @@ Rules:
 `;
 
 // ============================================
-// 3. ROBUST JSON EXTRACTION (The Fix)
+// 2. ROBUST JSON EXTRACTION
 // ============================================
 const extractJSON = (rawText) => {
-  if (typeof rawText !== 'string') return rawText;
+  if (!rawText) return null;
+  let text = typeof rawText === 'string' ? rawText : JSON.stringify(rawText);
 
   try {
-    // Clean markdown and whitespace
-    let cleaned = rawText
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // 1. Strip markdown code blocks
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    // Strategy: Find the first { and last }
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
+    // 2. Find boundaries of the JSON object
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
     
     if (firstBrace !== -1 && lastBrace !== -1) {
-      cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+      text = text.slice(firstBrace, lastBrace + 1);
     }
 
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(text);
     if (parsed.refinedCode) return parsed;
+    throw new Error("Missing refinedCode field");
   } catch (e) {
-    console.error("JSON Extraction failed. Raw text:", rawText);
-    throw new Error("Could not parse AI response as valid JSON");
+    console.error("JSON Extraction failed:", e.message);
+    return null;
   }
 };
 
 // ============================================
-// 4. LANGUAGE DETECTION
+// 3. LANGUAGE DETECTION
 // ============================================
 const detectLanguage = (code) => {
   if (!code) return 'python';
@@ -71,6 +70,43 @@ const detectLanguage = (code) => {
   if (c.includes('{') && c.includes(':') && c.includes(';')) return 'css';
   return 'python';
 };
+
+// ============================================
+// 4. AI ROUTING FUNCTION
+// ============================================
+async function routeToAI(code, provider, language) {
+  const response = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/refine-code`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ 
+        code, 
+        action: 'refine', 
+        provider, 
+        language,
+        prompt: SYSTEM_PROMPT 
+      })
+    }
+  );
+
+  if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+  const data = await response.json();
+  
+  // Handle nested structures from different AI providers
+  const aiContent = data.response || 
+                    data.choices?.[0]?.message?.content || 
+                    data.generated_text || 
+                    data;
+
+  const result = extractJSON(aiContent);
+  if (!result) throw new Error("AI returned unparseable code");
+  return result;
+}
 
 // ============================================
 // 5. MAIN REFINEMENT FUNCTION
@@ -92,55 +128,26 @@ export const refineSnippetWithFailover = async (currentCode, options = {}) => {
   try {
     const result = await routeToAI(codeString, 'groq', detectedLanguage);
     
-    if (result && result.refinedCode) {
-      const enriched = {
-        ...result,
-        language: detectedLanguage,
-        provider: 'groq',
-        refinedAt: new Date().toISOString()
-      };
-      localStorage.setItem(cacheKey, JSON.stringify(enriched));
-      return enriched;
-    }
+    const enriched = {
+      ...result,
+      language: detectedLanguage,
+      provider: 'groq',
+      refinedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem(cacheKey, JSON.stringify(enriched));
+    return enriched;
   } catch (err) {
-    console.warn("Primary provider failed, attempting fallback...", err.message);
-    // You can implement a fallback call to 'huggingface' here if your Edge Function supports it
+    console.warn("Primary provider failed:", err.message);
     return {
       error: true,
       refinedCode: codeString,
-      explanation: "Refinement failed. Please check your connection or try again later."
+      explanation: "AI refinement encountered an error. Please try again in a moment."
     };
   }
 };
 
 // ============================================
-// 6. AI ROUTING FUNCTION (The Engine)
+// 6. CRITICAL: EXPORT FOR THE BUTTON
 // ============================================
-async function routeToAI(code, provider, language) {
-  const response = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/refine-code`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify({ 
-        code, 
-        action: 'refine', 
-        provider, 
-        language,
-        prompt: SYSTEM_PROMPT 
-      })
-    }
-  );
-
-  if (!response.ok) throw new Error("Network response was not ok");
-
-  const data = await response.json();
-  
-  // The AI output is usually nested in 'data.response' or returned as a string
-  let aiContent = data.response || data.choices?.[0]?.message?.content || data;
-
-  return extractJSON(aiContent);
-}
+export const refineSnippet = refineSnippetWithFailover;

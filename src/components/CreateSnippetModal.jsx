@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { generateAutoTags } from "../utils/auto-tag"; // Import your auto-tag logic
+import { generateAutoTags } from "../lib/auto-tag"; // Import your auto-tag logic
 
 export default function CreateSnippetModal({ onClose, onSuccess }) {
   const [title, setTitle] = useState("");

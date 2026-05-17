@@ -8,54 +8,55 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [tempCode, setTempCode] = useState("");
-  const [detectedLanguage, setDetectedLanguage] = useState("text"); // Auto-tag state
+  const [detectedLanguage, setDetectedLanguage] = useState("text");
   
-  // AI States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [explanation, setExplanation] = useState("");
   const [isExplaining, setIsExplaining] = useState(false);
 
-  // 1. Language Detection Logic
-  // 1. Improved Language Detection Logic
- const autoDetectLanguage = (code) => {
+  // 1. THE ULTIMATE LANGUAGE DETECTOR
+  const autoDetectLanguage = (code) => {
     if (!code) return "text";
     const c = code.trim();
     const cLower = c.toLowerCase();
     
-    // 1. PYTHON (The "Hard" Rules)
-    // Python keywords that NEVER appear in JS like this
+    // PRIORITY 1: PANDAS (Very specific)
+    if (cLower.includes('import pandas') || cLower.includes('pd.')) return 'pandas';
+
+    // PRIORITY 2: PYTHON (Unique keywords)
     const isPython = 
       c.includes('def ') || 
       c.includes('pass') || 
       c.includes('elif') || 
       c.includes('import os') ||
-      (c.includes('print(') && !c.includes('console.log')) ||
-      c.includes('if __name__ ==');
+      c.includes('if __name__ ==') ||
+      (c.includes('print(') && !c.includes('console.log'));
 
     if (isPython) return 'python';
 
-    // 2. HTML
+    // PRIORITY 3: HTML
     if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) return 'html';
 
-    // 3. PANDAS
-    if (cLower.includes('import pandas') || cLower.includes('pd.')) return 'pandas';
-
-    // 4. JAVASCRIPT / REACT
-    // Only pick JS if it has JS-specific keywords and DIDN'T match Python above
+    // PRIORITY 4: JAVASCRIPT / REACT
     const isJS = 
       c.includes('const ') || 
       c.includes('let ') || 
-      c.includes('var ') || 
       c.includes('export default') || 
       c.includes('=>') ||
       c.includes('console.log');
 
     if (isJS) return 'javascript';
 
-    // 5. CSS
-    if (c.includes('{') && c.includes(':') && !c.includes('const')) return 'css';
+    // PRIORITY 5: CSS (Only if it has actual CSS properties)
+    const cssKeywords = ['margin', 'padding', 'color:', 'background', 'display:', 'flex', 'border:'];
+    const hasCssProperty = cssKeywords.some(k => cLower.includes(k));
     
-    return snippet?.language || "CSS";
+    if (c.includes('{') && c.includes(':') && hasCssProperty && !isPython && !isJS) {
+        return 'css';
+    }
+    
+    // FALLBACK: Use existing snippet language or default to "text" (NOT "CSS")
+    return snippet?.language || "text";
   };
 
   useEffect(() => {
@@ -67,11 +68,11 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
     }
   }, [snippet]);
 
-  // 2. Update tag when typing
+  // Update tag when typing (Debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDetectedLanguage(autoDetectLanguage(tempCode));
-    }, 500); // Debounce to avoid flickering
+    }, 500); 
     return () => clearTimeout(timer);
   }, [tempCode]);
 
@@ -84,7 +85,6 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
 
   const handleSave = async () => {
     if (!tempCode) return;
-    // We pass the detectedLanguage so the DB stays updated too
     await onSave(snippet.id, tempCode, detectedLanguage);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -123,7 +123,6 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
           <h2 className="text-sm font-semibold tracking-tight truncate max-w-30 sm:max-w-none">
             {snippet.title}
           </h2>
-          {/* Tag now uses detectedLanguage */}
           <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 uppercase font-bold tracking-widest transition-all">
             {detectedLanguage}
           </span>
@@ -148,16 +147,11 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
           <button 
             onClick={() => onDelete(snippet.id)}
             className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-            title="Delete Snippet"
           >
             <Trash2 size={16} />
           </button>
 
-          <button 
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-            title="Copy Code"
-          >
+          <button onClick={handleCopy} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all">
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             <span className="hidden sm:inline">Copy</span>
           </button>
@@ -166,23 +160,10 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
             onClick={handleSave}
             disabled={saved}
             className={`px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all shadow-lg flex items-center gap-2 ${
-              saved 
-              ? "bg-green-600 text-white shadow-green-500/10" 
-              : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/10"
+              saved ? "bg-green-600 text-white" : "bg-purple-600 hover:bg-purple-500 text-white"
             }`}
           >
-            {saved ? (
-              <>
-                <Check size={14} />
-                <span className="hidden sm:inline">Changes Saved!</span>
-                <span className="sm:hidden">Saved</span>
-              </>
-            ) : (
-              <>
-                <span className="sm:hidden"><Save size={14} /></span>
-                <span className="hidden sm:inline">Save Changes</span>
-              </>
-            )}
+            {saved ? <><Check size={14} /><span>Saved</span></> : <span>Save Changes</span>}
           </button>
         </div>
       </div>

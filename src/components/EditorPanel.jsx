@@ -17,28 +17,33 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
 
   // 1. Language Detection Logic
   // 1. Improved Language Detection Logic
-  const autoDetectLanguage = (code) => {
+ const autoDetectLanguage = (code) => {
     if (!code) return "text";
-    const c = code.trim().toLowerCase(); // Convert to lowercase for easier matching
+    const c = code.trim(); // Keep case sensitivity for keywords
+    const cLower = c.toLowerCase();
     
-    // Pandas Detection
-    if (c.includes('import pandas') || c.includes('pd.')) return 'pandas';
+    // 1. Python Detection (High Priority)
+    // We check for 'def ' and 'pass' which are unique to Python
+    if (c.includes('def ') || c.includes('pass') || c.includes('elif') || c.includes('import os')) {
+        return 'python';
+    }
+
+    // 2. Pandas Detection
+    if (cLower.includes('import pandas') || cLower.includes('pd.')) return 'pandas';
     
-    // HTML Detection (More aggressive)
-    if (c.startsWith('<') || c.includes('</div>') || c.includes('<html>') || c.includes('class=')) {
-        // If it has curly braces and colons, it might be CSS or JS, 
-        // but if it has tags, it's definitely HTML
-        if (c.includes('<') && c.includes('>')) return 'html';
+    // 3. HTML Detection
+    if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) {
+        return 'html';
     }
     
-    // CSS Detection
-    if (c.includes('{') && c.includes(':') && !c.includes('const') && !c.includes('function')) return 'css';
-    
-    // JS/React Detection
-    if (c.includes('import ') || c.includes('const ') || c.includes('export ') || c.includes('=>')) return 'javascript';
-    
-    // Python Detection
-    if (c.includes('def ') || (c.includes('print(') && !c.includes('console.log'))) return 'python';
+    // 4. JS/React Detection 
+    // This is lower priority because 'import' and 'const' are more generic
+    if (c.includes('import ') || c.includes('const ') || c.includes('export ') || c.includes('=>')) {
+        return 'javascript';
+    }
+
+    // 5. CSS Detection
+    if (c.includes('{') && c.includes(':') && !c.includes('const')) return 'css';
     
     return snippet?.language || "text";
   };

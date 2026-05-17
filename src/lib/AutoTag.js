@@ -8,19 +8,30 @@ export const generateAutoTags = async (id, code) => {
 
     if (error) throw error;
 
-    // Safety: Handle both stringified and object responses
     const result = typeof data === 'string' ? JSON.parse(data) : data;
     
-    // Extract both tags and the detected language
     const tags = result.tags || [];
-    const detectedLanguage = result.language?.toLowerCase() || 'text';
+    let detectedLanguage = result.language?.toLowerCase() || 'text';
 
-    // Update Supabase with the new tags AND the detected language
+    // --- 🛡️ THE PYTHON GUARD ---
+    // If the AI is wrong, we manually override it based on "Hard" keywords
+    const isActuallyPython = 
+      code.includes('def ') || 
+      code.includes('pass') || 
+      code.includes('elif') || 
+      code.includes('import os');
+
+    if (isActuallyPython) {
+      detectedLanguage = 'python';
+    }
+    // ---------------------------
+
+    // Update Supabase with the (now corrected) detected language
     const { error: updateError } = await supabase
       .from('snippets')
       .update({ 
         tags: tags,
-        language: detectedLanguage // No more defaulting to JS
+        language: detectedLanguage 
       })
       .eq('id', id);
 

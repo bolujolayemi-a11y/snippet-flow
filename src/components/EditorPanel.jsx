@@ -19,33 +19,43 @@ export default function EditorPanel({ snippet, onSave, onDelete }) {
   // 1. Improved Language Detection Logic
  const autoDetectLanguage = (code) => {
     if (!code) return "text";
-    const c = code.trim(); // Keep case sensitivity for keywords
+    const c = code.trim();
     const cLower = c.toLowerCase();
     
-    // 1. Python Detection (High Priority)
-    // We check for 'def ' and 'pass' which are unique to Python
-    if (c.includes('def ') || c.includes('pass') || c.includes('elif') || c.includes('import os')) {
-        return 'python';
-    }
+    // 1. PYTHON (The "Hard" Rules)
+    // Python keywords that NEVER appear in JS like this
+    const isPython = 
+      c.includes('def ') || 
+      c.includes('pass') || 
+      c.includes('elif') || 
+      c.includes('import os') ||
+      (c.includes('print(') && !c.includes('console.log')) ||
+      c.includes('if __name__ ==');
 
-    // 2. Pandas Detection
+    if (isPython) return 'python';
+
+    // 2. HTML
+    if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) return 'html';
+
+    // 3. PANDAS
     if (cLower.includes('import pandas') || cLower.includes('pd.')) return 'pandas';
-    
-    // 3. HTML Detection
-    if (c.startsWith('<') || cLower.includes('</div>') || cLower.includes('<html>')) {
-        return 'html';
-    }
-    
-    // 4. JS/React Detection 
-    // This is lower priority because 'import' and 'const' are more generic
-    if (c.includes('import ') || c.includes('const ') || c.includes('export ') || c.includes('=>')) {
-        return 'javascript';
-    }
 
-    // 5. CSS Detection
+    // 4. JAVASCRIPT / REACT
+    // Only pick JS if it has JS-specific keywords and DIDN'T match Python above
+    const isJS = 
+      c.includes('const ') || 
+      c.includes('let ') || 
+      c.includes('var ') || 
+      c.includes('export default') || 
+      c.includes('=>') ||
+      c.includes('console.log');
+
+    if (isJS) return 'javascript';
+
+    // 5. CSS
     if (c.includes('{') && c.includes(':') && !c.includes('const')) return 'css';
     
-    return snippet?.language || "text";
+    return snippet?.language || "CSS";
   };
 
   useEffect(() => {

@@ -46,43 +46,8 @@ The explanation MUST:
 GENERAL RULES:
 - Detect the programming language from the code automatically
 - Adapt explanations to the language context
-- Focus on best practices for that specific language
-- Avoid irrelevant domain assumptions
-
-LANGUAGE-SPECIFIC RULES:
-
-If Python (general):
-- Prefer vectorized operations over loops where applicable
-- Use safe type conversion patterns (e.g., errors='coerce' for pandas if used)
-- Avoid unnecessary type casting that destroys data integrity
-- Preserve meaningful missing values (NaN vs 0 distinction)
-
-If JavaScript:
-- Avoid global variables
-- Prefer const/let over var
-- Avoid duplicate function declarations
-- Prefer array methods (map/filter/reduce) over manual loops
-- Ensure safe DOM access and null checks
-
-If CSS:
-- Avoid deep/nested selectors like div div div
-- Prefer class-based reusable selectors
-- Avoid duplicate/conflicting rules
-- Encourage responsive and scalable styling patterns
-
-If HTML:
-- Use semantic HTML elements (header, section, footer, etc.)
-- Avoid deprecated tags (e.g., font, center)
-- Ensure accessibility (alt attributes, labels)
-- Keep structure clean and hierarchical
-
-If Data Cleaning (ONLY when explicitly data-focused code is detected):
-- Convert number words into numeric values where appropriate
-- Use safe parsing strategies for numbers and dates
-- Preserve semantic meaning of missing values (do not blindly replace with 0)
-- Normalize casing and whitespace consistently
-- Validate structured data like emails when relevant
-- Use vectorized operations for efficiency where applicable
+- Follow the provided refactor plan strictly
+- Avoid irrelevant suggestions outside the plan
 
 CRITICAL RULES:
 - Do NOT include markdown backticks
@@ -128,33 +93,21 @@ const numberWords = {
 // Email Validation
 // ======================
 const isValidEmail = (email) => {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    String(email).trim()
-  );
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
 };
 
 // ======================
 // String Normalization
 // ======================
-const normalizeString = (
-  value,
-  fallback = "UNKNOWN"
-) => {
-  if (value === null || value === undefined) {
-    return fallback;
-  }
+const normalizeString = (value, fallback = "UNKNOWN") => {
+  if (value === null || value === undefined) return fallback;
 
   const cleaned = String(value)
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();
 
-  if (
-    !cleaned ||
-    ["none", "null", "nan", "undefined"].includes(
-      cleaned
-    )
-  ) {
+  if (!cleaned || ["none", "null", "nan", "undefined"].includes(cleaned)) {
     return fallback;
   }
 
@@ -165,30 +118,18 @@ const normalizeString = (
 // Number Normalization
 // ======================
 const normalizeNumber = (value) => {
-  if (value === null || value === undefined) {
-    return null;
-  }
+  if (value === null || value === undefined) return null;
 
-  const lower = String(value)
-    .trim()
-    .toLowerCase();
+  const lower = String(value).trim().toLowerCase();
 
-  // word number support
   if (numberWords[lower] !== undefined) {
     return numberWords[lower];
   }
 
-  // remove currency/symbols
-  const cleaned = lower.replace(
-    /[^0-9.-]/g,
-    ""
-  );
-
+  const cleaned = lower.replace(/[^0-9.-]/g, "");
   const parsed = parseFloat(cleaned);
 
-  return Number.isNaN(parsed)
-    ? null
-    : parsed;
+  return Number.isNaN(parsed) ? null : parsed;
 };
 
 // ======================
@@ -198,20 +139,15 @@ const normalizeDate = (value) => {
   if (!value) return null;
 
   const parsed = new Date(value);
-
-  return isNaN(parsed.getTime())
-    ? null
-    : parsed.toISOString();
+  return isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
 
 // ======================
-// Cache Helpers
+// CACHE
 // ======================
 const getCachedResult = (key) => {
   try {
-    const cached =
-      localStorage.getItem(key);
-
+    const cached = localStorage.getItem(key);
     if (!cached) return null;
 
     const parsed = JSON.parse(cached);
@@ -232,75 +168,43 @@ const setCachedResult = (key, data) => {
     localStorage.setItem(
       key,
       JSON.stringify({
-        expiry:
-          Date.now() + CACHE_TTL,
+        expiry: Date.now() + CACHE_TTL,
         data,
       })
     );
   } catch (err) {
-    console.warn(
-      "Cache write failed:",
-      err.message
-    );
+    console.warn("Cache write failed:", err.message);
   }
 };
 
 // ======================
 // Schema Validation
 // ======================
-const validateAIResponse = (
-  result
-) => {
+const validateAIResponse = (result) => {
   return (
     result &&
     typeof result === "object" &&
-    typeof result.refinedCode ===
-      "string" &&
-    result.refinedCode.trim()
-      .length > 0 &&
-    typeof result.suggestedTitle ===
-      "string" &&
-    typeof result.explanation ===
-      "string"
+    typeof result.refinedCode === "string" &&
+    typeof result.suggestedTitle === "string" &&
+    typeof result.explanation === "string"
   );
 };
 
 // ======================
 // Retry Utility
 // ======================
-const delay = (ms) =>
-  new Promise((resolve) =>
-    setTimeout(resolve, ms)
-  );
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function withRetry(
-  fn,
-  retries = MAX_RETRIES
-) {
+async function withRetry(fn, retries = MAX_RETRIES) {
   let lastError;
 
-  for (
-    let attempt = 0;
-    attempt <= retries;
-    attempt++
-  ) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fn();
     } catch (err) {
       lastError = err;
-
       if (attempt < retries) {
-        const waitTime =
-          1000 *
-          Math.pow(2, attempt);
-
-        console.warn(
-          `Retry ${
-            attempt + 1
-          }/${retries} after ${waitTime}ms`
-        );
-
-        await delay(waitTime);
+        await delay(1000 * Math.pow(2, attempt));
       }
     }
   }
@@ -311,272 +215,150 @@ async function withRetry(
 // ======================
 // Timeout Wrapper
 // ======================
-async function withTimeout(
-  promiseFactory,
-  timeout = REQUEST_TIMEOUT
-) {
-  const controller =
-    new AbortController();
-
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    timeout
-  );
+async function withTimeout(promiseFactory, timeout = REQUEST_TIMEOUT) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    return await promiseFactory(
-      controller.signal
-    );
+    return await promiseFactory(controller.signal);
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-// ======================
-// Main Refiner
-// ======================
-export const refineSnippetWithFailover =
-  async (currentCode) => {
-    if (!currentCode) return;
-
-    const codeString =
-      typeof currentCode ===
-      "string"
-        ? currentCode
-        : currentCode.code ||
-          String(currentCode);
-
-    const cacheKey = await getHash(codeString + SYSTEM_PROMPT);
-
-    // ======================
-    // Cache Check
-    // ======================
-    const cached =
-      getCachedResult(cacheKey);
-
-    if (cached) {
-      console.log(
-        "⚡ Returning cached refinement"
-      );
-      return cached;
-    }
-
-    // ======================
-    // Primary Provider
-    // ======================
-    try {
-      console.log(
-        "📡 Calling Groq..."
-      );
-
-      const result =
-        await withRetry(() =>
-          routeToAI(
-            codeString,
-            "groq"
-          )
-        );
-
-      if (
-        validateAIResponse(result)
-      ) {
-        setCachedResult(
-          cacheKey,
-          result
-        );
-
-        return result;
-      }
-
-      throw new Error(
-        "Invalid Groq response"
-      );
-    } catch (err) {
-      console.warn(
-        "⚠️ Groq failed. Switching fallback..."
-      );
-    }
-
-    // ======================
-    // Fallback Provider
-    // ======================
-    try {
-      const result =
-        await withRetry(() =>
-          routeToAI(
-            codeString,
-            "huggingface"
-          )
-        );
-
-      if (
-        validateAIResponse(result)
-      ) {
-        setCachedResult(
-          cacheKey,
-          result
-        );
-
-        return result;
-      }
-
-      throw new Error(
-        "Invalid fallback response"
-      );
-    } catch (err) {
-      console.error(
-        "❌ Both providers failed"
-      );
-
-      throw new Error(
-        "Snippet refinement service is temporarily unavailable."
-      );
-    }
-  };
-
-export {
-  refineSnippetWithFailover as refineSnippet,
 };
 
 // ======================
-// AI Router
+// 🔥 SEMANTIC LAYER (ADDED - SAFE)
 // ======================
-async function routeToAI(
-  code,
-  provider
-) {
-  return withTimeout(
-    async (signal) => {
-      const response =
-        await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/refine-code`,
-          {
-            method: "POST",
-            signal,
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              code,
-              action: "refine",
-              provider,
-              prompt:
-                SYSTEM_PROMPT,
-            }),
-          }
-        );
+function analyzeSemantics(code) {
+  return {
+    hasVar: /\bvar\b/.test(code),
+    globalLeak: /^\s*[a-zA-Z_$][\w$]*\s*=/.test(code),
+    duplicateFunctions: /(function\s+\w+)[\s\S]*\1/.test(code),
+    looseEquality: /==[^=]/.test(code),
+    mutationRisk: /\[\w+\]\s*=/.test(code),
+  };
+}
 
-      // ======================
-      // Content-Type Validation
-      // ======================
-      const contentType =
-        response.headers.get(
-          "content-type"
-        );
+function buildRefactorPlan(analysis) {
+  const plan = [];
 
-      if (
-        !contentType ||
-        !contentType.includes(
-          "application/json"
-        )
-      ) {
-        const rawText =
-          await response.text();
+  if (analysis.hasVar) plan.push("use_const_let");
+  if (analysis.globalLeak) plan.push("remove_global_pollution");
+  if (analysis.duplicateFunctions) plan.push("resolve_function_shadowing");
+  if (analysis.looseEquality) plan.push("enforce_strict_equality");
+  if (analysis.mutationRisk) plan.push("avoid_mutation_in_loops");
 
-        console.error(
-          "Non-JSON response:",
-          rawText.substring(
-            0,
-            200
-          )
-        );
+  return plan;
+}
 
-        throw new Error(
-          `Invalid response from ${provider}`
-        );
-      }
+// ======================
+// MAIN REFINER
+// ======================
+export const refineSnippetWithFailover = async (currentCode) => {
+  if (!currentCode) return;
 
-      let data =
-        await response.json();
+  const codeString =
+    typeof currentCode === "string"
+      ? currentCode
+      : currentCode.code || String(currentCode);
 
-      if (data?.error) {
-        throw new Error(
-          data.error
-        );
-      }
+  // 🔥 SEMANTIC ANALYSIS ADDED
+  const semanticAnalysis = analyzeSemantics(codeString);
+  const refactorPlan = buildRefactorPlan(semanticAnalysis);
 
-      // ======================
-      // HF Array Support
-      // ======================
-      if (Array.isArray(data)) {
-        data =
-          data[0]
-            ?.generated_text ||
-          data[0];
-      }
-
-      // ======================
-      // Safe JSON Extraction
-      // ======================
-      if (
-        typeof data ===
-        "string"
-      ) {
-        data = data
-          .replace(
-            /```json/g,
-            ""
-          )
-          .replace(/```/g, "")
-          .trim();
-
-        const firstBrace =
-          data.indexOf("{");
-
-        const lastBrace =
-          data.lastIndexOf(
-            "}"
-          );
-
-        if (
-          firstBrace !== -1 &&
-          lastBrace !== -1
-        ) {
-          const jsonString =
-            data.slice(
-              firstBrace,
-              lastBrace + 1
-            );
-
-          try {
-            data =
-              JSON.parse(
-                jsonString
-              );
-          } catch {
-            throw new Error(
-              "Malformed AI JSON response"
-            );
-          }
-        }
-      }
-
-      // ======================
-      // Final Schema Validation
-      // ======================
-      if (
-        !validateAIResponse(
-          data
-        )
-      ) {
-        throw new Error(
-          `Invalid schema from ${provider}`
-        );
-      }
-
-      return data;
-    }
+  const cacheKey = await getHash(
+    codeString + SYSTEM_PROMPT + JSON.stringify(refactorPlan)
   );
+
+  const cached = getCachedResult(cacheKey);
+  if (cached) {
+    console.log("⚡ Returning cached refinement");
+    return cached;
+  }
+
+  try {
+    const result = await withRetry(() =>
+      routeToAI(codeString, "groq", semanticAnalysis, refactorPlan)
+    );
+
+    if (validateAIResponse(result)) {
+      setCachedResult(cacheKey, result);
+      return result;
+    }
+
+    throw new Error("Invalid Groq response");
+  } catch (err) {
+    console.warn("⚠️ Groq failed. Switching fallback...");
+  }
+
+  try {
+    const result = await withRetry(() =>
+      routeToAI(codeString, "huggingface", semanticAnalysis, refactorPlan)
+    );
+
+    if (validateAIResponse(result)) {
+      setCachedResult(cacheKey, result);
+      return result;
+    }
+
+    throw new Error("Invalid fallback response");
+  } catch (err) {
+    throw new Error("Snippet refinement service is temporarily unavailable.");
+  }
+};
+
+export { refineSnippetWithFailover as refineSnippet };
+
+// ======================
+// AI ROUTER
+// ======================
+async function routeToAI(code, provider, semanticAnalysis, refactorPlan) {
+  return withTimeout(async (signal) => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/refine-code`,
+      {
+        method: "POST",
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          code,
+          action: "refine",
+          provider,
+          prompt: SYSTEM_PROMPT,
+          semanticAnalysis,
+          refactorPlan, // 🔥 NEW
+        }),
+      }
+    );
+
+    const contentType = response.headers.get("content-type");
+
+    if (!contentType?.includes("application/json")) {
+      const rawText = await response.text();
+      throw new Error(`Invalid response from ${provider}`);
+    }
+
+    let data = await response.json();
+
+    if (Array.isArray(data)) {
+      data = data[0]?.generated_text || data[0];
+    }
+
+    if (typeof data === "string") {
+      const start = data.indexOf("{");
+      const end = data.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        data = JSON.parse(data.slice(start, end + 1));
+      }
+    }
+
+    if (!validateAIResponse(data)) {
+      throw new Error(`Invalid schema from ${provider}`);
+    }
+
+    return data;
+  });
 }

@@ -39,24 +39,55 @@ The explanation MUST:
 - Use Markdown formatting
 - Use ### headers
 - Use bullet points
-- Explain performance issues
-- Explain code transformations
-- Mention data cleaning improvements
+- Explain performance issues clearly
+- Explain code transformations clearly
+- Be tailored to the detected programming language
 
-FOR DATA CLEANING:
-- Convert number words like "thirty" into numeric values where appropriate
-- Use errors='coerce' for safe numeric/date parsing
-- Preserve semantic meaning of missing values
-- Validate emails where possible
-- Normalize casing and whitespace
-- Avoid replacing all missing values with 0 globally
-- Use vectorized pandas operations
-- Preserve valid dates instead of destroying entire columns
+GENERAL RULES:
+- Detect the programming language from the code automatically
+- Adapt explanations to the language context
+- Focus on best practices for that specific language
+- Avoid irrelevant domain assumptions
 
-CRITICAL:
-- No markdown backticks
-- No introductory text
-- Return ONLY JSON
+LANGUAGE-SPECIFIC RULES:
+
+If Python (general):
+- Prefer vectorized operations over loops where applicable
+- Use safe type conversion patterns (e.g., errors='coerce' for pandas if used)
+- Avoid unnecessary type casting that destroys data integrity
+- Preserve meaningful missing values (NaN vs 0 distinction)
+
+If JavaScript:
+- Avoid global variables
+- Prefer const/let over var
+- Avoid duplicate function declarations
+- Prefer array methods (map/filter/reduce) over manual loops
+- Ensure safe DOM access and null checks
+
+If CSS:
+- Avoid deep/nested selectors like div div div
+- Prefer class-based reusable selectors
+- Avoid duplicate/conflicting rules
+- Encourage responsive and scalable styling patterns
+
+If HTML:
+- Use semantic HTML elements (header, section, footer, etc.)
+- Avoid deprecated tags (e.g., font, center)
+- Ensure accessibility (alt attributes, labels)
+- Keep structure clean and hierarchical
+
+If Data Cleaning (ONLY when explicitly data-focused code is detected):
+- Convert number words into numeric values where appropriate
+- Use safe parsing strategies for numbers and dates
+- Preserve semantic meaning of missing values (do not blindly replace with 0)
+- Normalize casing and whitespace consistently
+- Validate structured data like emails when relevant
+- Use vectorized operations for efficiency where applicable
+
+CRITICAL RULES:
+- Do NOT include markdown backticks
+- Do NOT add introductory or closing text
+- Return ONLY the JSON object
 `;
 
 // ======================

@@ -346,9 +346,7 @@ export const refineSnippetWithFailover =
         : currentCode.code ||
           String(currentCode);
 
-    const cacheKey = `sf_cache_${await getHash(
-      codeString
-    )}`;
+    const cacheKey = await getHash(codeString + SYSTEM_PROMPT);
 
     // ======================
     // Cache Check
